@@ -11,15 +11,15 @@ process.on('uncaughtException', error => console.log(error));
 
 const fs = require("fs-extra");
 const path = require("path");
-const { execSync } = require('child_process');
 const login = require('mahmud-fca');
 const axios = require("axios");
 const cheerio = require("cheerio");
 const qs = require('qs');
 const request = require("request").defaults({ jar: true, simple: false });
+const { execSync } = require('child_process');
 
 // ═══════════════════════════════════════════════════════════════
-// 📂 3. LOG (SISTEMA DE LOGS SIMPLIFICADO)
+// 📂 3. LOG
 // ═══════════════════════════════════════════════════════════════
 
 const log = {
@@ -32,8 +32,12 @@ const log = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// 🔍 4. FUNÇÃO: VALIDA ARQUIVOS JSON
+// 📂 4. CARREGA CONFIGURAÇÕES
 // ═══════════════════════════════════════════════════════════════
+
+const dirConfig = path.normalize(`${__dirname}/config.json`);
+const dirConfigCommands = path.normalize(`${__dirname}/configCommands.json`);
+const dirAccount = path.normalize(`${__dirname}/account.txt`);
 
 function validJSON(pathDir) {
     try {
@@ -51,14 +55,6 @@ function validJSON(pathDir) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// 📂 5. CAMINHOS DOS ARQUIVOS
-// ═══════════════════════════════════════════════════════════════
-
-const dirConfig = path.normalize(`${__dirname}/config.json`);
-const dirConfigCommands = path.normalize(`${__dirname}/configCommands.json`);
-const dirAccount = path.normalize(`${__dirname}/account.txt`);
-
 for (const pathDir of [dirConfig, dirConfigCommands]) {
     try {
         validJSON(pathDir);
@@ -70,12 +66,13 @@ for (const pathDir of [dirConfig, dirConfigCommands]) {
 }
 
 const config = require(dirConfig);
-if (config.whiteListMode?.whiteListIds && Array.isArray(config.whiteListMode.whiteListIds))
-    config.whiteListMode.whiteListIds = config.whiteListMode.whiteListIds.map(id => id.toString());
 const configCommands = require(dirConfigCommands);
 
+if (config.whiteListMode?.whiteListIds && Array.isArray(config.whiteListMode.whiteListIds))
+    config.whiteListMode.whiteListIds = config.whiteListMode.whiteListIds.map(id => id.toString());
+
 // ═══════════════════════════════════════════════════════════════
-// 🌐 6. OBJETO GLOBAL DO BOT
+// 🌐 5. OBJETO GLOBAL DO BOT
 // ═══════════════════════════════════════════════════════════════
 
 global.SadXBot = {
@@ -102,11 +99,15 @@ global.SadXBot = {
     callbackListenTime: {},
     storage5Message: [],
     fcaApi: null,
-    botID: null
+    botID: null,
+    prefix: config.prefix || '!',
+    adminBot: config.adminBot || [],
+    nickNameBot: config.nickNameBot || 'SadX Bot',
+    timeZone: config.timeZone || 'Africa/Luanda'
 };
 
 // ═══════════════════════════════════════════════════════════════
-// 🗄️ 7. BANCO DE DADOS
+// 🗄️ 6. BANCO DE DADOS
 // ═══════════════════════════════════════════════════════════════
 
 global.db = {
@@ -126,7 +127,7 @@ global.db = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// 🧠 8. OBJETO GLOBAL DO CLIENTE
+// 🧠 7. CLIENTE
 // ═══════════════════════════════════════════════════════════════
 
 global.client = {
@@ -144,18 +145,67 @@ global.client = {
     commandBanned: configCommands.commandBanned
 };
 
-global.utils = {
-    colors: {
-        gray: (t) => t,
-        hex: (c, t) => t,
-        green: (t) => t,
-        red: (t) => t,
-        yellow: (t) => t
+const utils = require("./utils.js");
+global.utils = utils;
+const { colors } = utils;
+
+global.temp = {
+    createThreadData: [],
+    createUserData: [],
+    createThreadDataError: [],
+    filesOfGoogleDrive: {
+        arraybuffer: {},
+        stream: {},
+        fileNames: {}
     },
-    getText: (a, b) => b,
-    convertTime: (ms) => `${Math.floor(ms / 1000)}s`,
-    loading: { info: () => {} }
+    contentScripts: {
+        cmds: {},
+        events: {}
+    }
 };
+
+// ═══════════════════════════════════════════════════════════════
+// 👀 8. MONITORA CONFIGURAÇÕES
+// ═══════════════════════════════════════════════════════════════
+
+const watchAndReloadConfig = (dir, type, prop, logName) => {
+    let lastModified = fs.statSync(dir).mtimeMs;
+    let isFirstModified = true;
+
+    fs.watch(dir, (eventType) => {
+        if (eventType === type) {
+            const oldConfig = global.SadXBot[prop];
+
+            setTimeout(() => {
+                try {
+                    if (isFirstModified) {
+                        isFirstModified = false;
+                        return;
+                    }
+                    if (lastModified === fs.statSync(dir).mtimeMs) {
+                        return;
+                    }
+                    global.SadXBot[prop] = JSON.parse(fs.readFileSync(dir, 'utf-8'));
+                    log.success(logName, `Reloaded ${dir.replace(process.cwd(), "")}`);
+                }
+                catch (err) {
+                    log.warn(logName, `Can't reload ${dir.replace(process.cwd(), "")}`);
+                    global.SadXBot[prop] = oldConfig;
+                }
+                finally {
+                    lastModified = fs.statSync(dir).mtimeMs;
+                }
+            }, 200);
+        }
+    });
+};
+
+watchAndReloadConfig(dirConfigCommands, 'change', 'configCommands', 'CONFIG COMMANDS');
+watchAndReloadConfig(dirConfig, 'change', 'config', 'CONFIG');
+
+global.SadXBot.envGlobal = global.SadXBot.configCommands.envGlobal;
+global.SadXBot.envCommands = global.SadXBot.configCommands.envCommands;
+global.SadXBot.envEvents = global.SadXBot.configCommands.envEvents;
 
 // ═══════════════════════════════════════════════════════════════
 // 📦 9. FUNÇÕES: GETFBSTATE E LOGINMBASIC
@@ -188,10 +238,10 @@ async function getFbstate(tokenFullPermission) {
         });
 }
 
-async function loginMbasic(email, pass) {
+async function loginMbasic(email, pass, userAgent) {
     const targetCookie = "https://m.facebook.com/";
     const headers = {
-        "user-agent": "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Mobile Safari/537.36"
+        "user-agent": userAgent || "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Mobile Safari/537.36"
     };
     const jar = request.jar();
     jar.setCookie(`locale=en_US`, targetCookie);
@@ -237,7 +287,108 @@ async function loginMbasic(email, pass) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🔑 10. LOADSCRIPTS E LOADDATA (EMBUTIDOS)
+// 🔑 10. OBTER APPSTATE (COM EMAIL/SENHA DO CONFIG)
+// ═══════════════════════════════════════════════════════════════
+
+async function getAppState() {
+    try {
+        const accountData = fs.readFileSync(dirAccount, 'utf8');
+        const parsed = JSON.parse(accountData);
+
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].key) {
+            return parsed;
+        }
+
+        if (typeof parsed === 'string' && parsed.startsWith('EAAAA')) {
+            log.info("LOGIN", "🔑 Token detectado...");
+            return await getFbstate(parsed);
+        }
+
+        if (Array.isArray(parsed) && parsed.length === 2) {
+            log.info("LOGIN", "📧 Email/senha detectado...");
+            const userAgent = config.facebookAccount?.userAgent;
+            return await loginMbasic(parsed[0], parsed[1], userAgent);
+        }
+
+        return parsed;
+    } catch (e) {
+        log.error("LOGIN", `Erro: ${e.message}`);
+
+        // 🔥 TENTA USAR EMAIL/SENHA DO CONFIG
+        if (config.facebookAccount?.email && config.facebookAccount?.password) {
+            log.info("LOGIN", "📧 Usando email/senha do config.json...");
+            const { email, password, userAgent } = config.facebookAccount;
+            try {
+                return await loginMbasic(email, password, userAgent);
+            } catch (err) {
+                log.error("LOGIN", `Erro no login com email: ${err.message}`);
+                process.exit(1);
+            }
+        }
+
+        log.info("LOGIN", "💡 account.txt deve conter: appstate (JSON), token (EAAAA...) ou email/senha");
+        process.exit(1);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🗄️ 11. LOADDATA
+// ═══════════════════════════════════════════════════════════════
+
+async function loadData(api) {
+    const usersPath = path.join(__dirname, 'database', 'data', 'usersData.json');
+    const threadsPath = path.join(__dirname, 'database', 'data', 'threadsData.json');
+
+    let users = [];
+    let threads = [];
+
+    try {
+        if (fs.existsSync(usersPath)) users = fs.readJSONSync(usersPath);
+        if (fs.existsSync(threadsPath)) threads = fs.readJSONSync(threadsPath);
+    } catch (e) {
+        log.warn("DATABASE", `Erro: ${e.message}`);
+    }
+
+    global.db.allUserData = users;
+    global.db.allThreadData = threads;
+
+    global.db.usersData = {
+        get: async (userID) => global.db.allUserData.find(u => u.userID == userID) || null,
+        set: async (userID, data) => {
+            const index = global.db.allUserData.findIndex(u => u.userID == userID);
+            if (index === -1) {
+                global.db.allUserData.push({ userID, ...data });
+            } else {
+                global.db.allUserData[index] = { ...global.db.allUserData[index], ...data };
+            }
+            fs.writeJSONSync(usersPath, global.db.allUserData, { spaces: 2 });
+            return global.db.allUserData.find(u => u.userID == userID);
+        },
+        getAll: async () => global.db.allUserData,
+        getAvatarUrl: (userID) => `https://graph.facebook.com/${userID}/picture?width=500&height=500`
+    };
+
+    global.db.threadsData = {
+        get: async (threadID) => global.db.allThreadData.find(t => t.threadID == threadID) || null,
+        set: async (threadID, data) => {
+            const index = global.db.allThreadData.findIndex(t => t.threadID == threadID);
+            if (index === -1) {
+                global.db.allThreadData.push({ threadID, ...data });
+            } else {
+                global.db.allThreadData[index] = { ...global.db.allThreadData[index], ...data };
+            }
+            fs.writeJSONSync(threadsPath, global.db.allThreadData, { spaces: 2 });
+            return global.db.allThreadData.find(t => t.threadID == threadID);
+        },
+        getAll: async () => global.db.allThreadData
+    };
+
+    log.info("DATABASE", `👥 ${global.db.allUserData.length} usuários`);
+    log.info("DATABASE", `💬 ${global.db.allThreadData.length} grupos`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📦 12. LOADSCRIPTS
 // ═══════════════════════════════════════════════════════════════
 
 async function loadScripts(api) {
@@ -266,104 +417,8 @@ async function loadScripts(api) {
     log.success("LOAD", `📦 ${loaded} comandos carregados${errors ? `, ${errors} falhas` : ''}`);
 }
 
-async function loadData(api) {
-    const usersPath = path.join(__dirname, 'database', 'data', 'usersData.json');
-    const threadsPath = path.join(__dirname, 'database', 'data', 'threadsData.json');
-
-    let users = [];
-    let threads = [];
-
-    try {
-        if (fs.existsSync(usersPath)) users = fs.readJSONSync(usersPath);
-        if (fs.existsSync(threadsPath)) threads = fs.readJSONSync(threadsPath);
-    } catch (e) {
-        log.warn("DATABASE", `Erro ao carregar dados: ${e.message}`);
-    }
-
-    global.db.allUserData = users;
-    global.db.allThreadData = threads;
-
-    // 🔥 Cria o usersData com métodos básicos
-    global.db.usersData = {
-        get: async (userID) => {
-            return global.db.allUserData.find(u => u.userID == userID) || null;
-        },
-        set: async (userID, data) => {
-            const index = global.db.allUserData.findIndex(u => u.userID == userID);
-            if (index === -1) {
-                global.db.allUserData.push({ userID, ...data });
-            } else {
-                global.db.allUserData[index] = { ...global.db.allUserData[index], ...data };
-            }
-            fs.writeJSONSync(usersPath, global.db.allUserData, { spaces: 2 });
-            return global.db.allUserData.find(u => u.userID == userID);
-        },
-        getAll: async () => global.db.allUserData,
-        getAvatarUrl: (userID) => `https://graph.facebook.com/${userID}/picture?width=500&height=500`
-    };
-
-    global.db.threadsData = {
-        get: async (threadID) => {
-            return global.db.allThreadData.find(t => t.threadID == threadID) || null;
-        },
-        set: async (threadID, data) => {
-            const index = global.db.allThreadData.findIndex(t => t.threadID == threadID);
-            if (index === -1) {
-                global.db.allThreadData.push({ threadID, ...data });
-            } else {
-                global.db.allThreadData[index] = { ...global.db.allThreadData[index], ...data };
-            }
-            fs.writeJSONSync(threadsPath, global.db.allThreadData, { spaces: 2 });
-            return global.db.allThreadData.find(t => t.threadID == threadID);
-        },
-        getAll: async () => global.db.allThreadData
-    };
-
-    log.info("DATABASE", `👥 ${global.db.allUserData.length} usuários`);
-    log.info("DATABASE", `💬 ${global.db.allThreadData.length} grupos`);
-
-    return {
-        usersData: global.db.usersData,
-        threadsData: global.db.threadsData
-    };
-}
-
 // ═══════════════════════════════════════════════════════════════
-// 🔑 11. FUNÇÃO: OBTER APPSTATE
-// ═══════════════════════════════════════════════════════════════
-
-async function getAppState() {
-    try {
-        const accountData = fs.readFileSync(dirAccount, 'utf8');
-        const parsed = JSON.parse(accountData);
-
-        // 🔥 SE FOR ARRAY DE COOKIES
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].key) {
-            return parsed;
-        }
-
-        // 🔥 SE FOR TOKEN (EAAAA...)
-        if (typeof parsed === 'string' && parsed.startsWith('EAAAA')) {
-            log.info("LOGIN", "🔑 Token detectado, obtendo appstate...");
-            return await getFbstate(parsed);
-        }
-
-        // 🔥 SE FOR EMAIL/SENHA
-        if (Array.isArray(parsed) && parsed.length === 2) {
-            log.info("LOGIN", "📧 Email/senha detectado, tentando login via mbasic...");
-            return await loginMbasic(parsed[0], parsed[1]);
-        }
-
-        return parsed;
-    } catch (e) {
-        log.error("LOGIN", `Erro ao ler account.txt: ${e.message}`);
-        log.info("LOGIN", "💡 account.txt deve conter: appstate (JSON), token (EAAAA...) ou email/senha");
-        process.exit(1);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 🔑 12. HANDLER DE EVENTOS
+// 🎯 13. HANDLER DE EVENTOS
 // ═══════════════════════════════════════════════════════════════
 
 function handleEvent(api, event) {
@@ -371,8 +426,15 @@ function handleEvent(api, event) {
 
     if (senderID === api.getCurrentUserID()) return;
 
-    if (body && body.startsWith('!')) {
-        const args = body.slice(1).split(' ');
+    if (config.whiteListMode?.enable) {
+        if (!config.whiteListMode.whiteListIds.includes(senderID) &&
+            !config.adminBot.includes(senderID)) {
+            return;
+        }
+    }
+
+    if (body && body.startsWith(config.prefix || '!')) {
+        const args = body.slice(config.prefix.length).split(' ');
         const commandName = args.shift().toLowerCase();
 
         const command = global.SadXBot.commands.get(commandName) ||
@@ -397,36 +459,57 @@ function handleEvent(api, event) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🚀 13. INICIALIZAÇÃO DO BOT
+// 🔄 14. AUTO RESTART
+// ═══════════════════════════════════════════════════════════════
+
+function setupAutoRestart() {
+    const autoRestart = config.autoRestart;
+    if (!autoRestart) return;
+
+    const time = autoRestart.time;
+    if (!time) return;
+
+    if (!isNaN(time) && time > 0) {
+        log.info("AUTO RESTART", `⏰ Reiniciará em ${Math.floor(time / 60000)} minutos`);
+        setTimeout(() => {
+            log.info("AUTO RESTART", "🔄 Reiniciando...");
+            process.exit(2);
+        }, time);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🚀 15. INICIALIZAÇÃO
 // ═══════════════════════════════════════════════════════════════
 
 (async function startBot() {
     try {
-        console.log('🌸 SadX Bot iniciando...');
+        console.log(`🌸 ${config.nickNameBot || 'SadX Bot'} iniciando...`);
 
         const appState = await getAppState();
 
-        login({ appState }, async (err, api) => {
+        login({ appState, ...config.optionsFca }, async (err, api) => {
             if (err) {
                 log.error("LOGIN", `Erro: ${err}`);
                 process.exit(1);
             }
 
-            log.success("LOGIN", `✅ Conectado ao Facebook!`);
+            log.success("LOGIN", `✅ Conectado!`);
             log.info("LOGIN", `🆔 Bot ID: ${api.getCurrentUserID()}`);
 
             global.SadXBot.fcaApi = api;
             global.SadXBot.botID = api.getCurrentUserID();
 
-            // 🔥 CARREGA DADOS E COMANDOS
             await loadData(api);
             await loadScripts(api);
 
-            log.success("START", `🚀 Bot pronto para uso!`);
+            log.success("START", `🚀 ${config.nickNameBot || 'SadX Bot'} pronto!`);
             log.info("START", `📅 ${new Date().toLocaleString()}`);
             log.info("START", `💡 Prefixo: ${config.prefix || '!'}`);
+            log.info("START", `👑 Admins: ${config.adminBot?.length || 0}`);
 
-            // 🔥 INICIA O LISTENER
+            setupAutoRestart();
+
             api.listenMqtt((err, event) => {
                 if (err) {
                     log.error("LISTENER", `Erro: ${err}`);
