@@ -1,0 +1,9 @@
+{
+  "commands": [
+    {
+      "name": "ping",
+      "description": "Responde com pong",
+      "enabled": true
+    }
+  ]
+}
