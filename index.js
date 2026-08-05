@@ -1,12 +1,9 @@
-// index.js
-// Ponto de entrada do bot (exemplo básico)
+const fs = require('fs-extra');
+const path = require('path');
 
-const SadX = require('./SadX');
-const bot = new SadX('SadXBot');
+console.log('🌸 SadX Bot iniciando...');
 
-console.log('Iniciando SadXBot...');
-bot.logSadMessage();
+// 🔥 CARREGA O ARQUIVO PRINCIPAL
+const bot = require('./SadX.js');
 
-// Exemplo de uso do login
-const { login } = require('./bot/login/login');
-login().then(() => console.log('Login (simulado) concluído')).catch(console.error);
+console.log('✅ SadX Bot iniciado com sucesso!');
