@@ -1,6 +1,135 @@
 {
+  "author": ["SadX"],
+  "facebookAccount": {
+    "email": "seuemail@gmail.com",
+    "password": "suasenha",
+    "2FASecret": "",
+    "i_user": "",
+    "proxy": null,
+    "userAgent": "Mozilla/5.0 (Linux; Android 12; M2102J20SG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Mobile Safari/537.36",
+    "intervalGetNewCookie": 1440
+  },
+  "antiInbox": false,
+  "language": "pt",
+  "adminOnly": {
+    "enable": false,
+    "ignoreCommand": []
+  },
+  "adminBot": [
+    "61590677925905",
+    "100076392843792"
+  ],
+  "whiteListMode": {
+    "enable": false,
+    "whiteListIds": []
+  },
+  "nickNameBot": "Hinata Bot",
   "prefix": "!",
-  "language": "pt-BR",
-  "owner": "",
-  "debug": true
+  "database": {
+    "type": "json",
+    "uriMongodb": "",
+    "autoSyncWhenStart": false,
+    "autoRefreshThreadInfoFirstTime": true
+  },
+  "timeZone": "Africa/Maputo",
+  "credentials": {
+    "gmailAccount": {
+      "email": "",
+      "clientId": "",
+      "clientSecret": "",
+      "refreshToken": "",
+      "apiKey": ""
+    },
+    "gRecaptcha": {
+      "siteKey": "",
+      "secretKey": ""
+    }
+  },
+  "dashBoard": {
+    "enable": false,
+    "expireVerifyCode": 300000,
+    "port": 3001
+  },
+  "serverUptime": {
+    "enable": false,
+    "port": 3001,
+    "socket": {
+      "enable": false,
+      "channelName": "uptime",
+      "verifyToken": ""
+    }
+  },
+  "autoRestart": {
+    "time": 3600000
+  },
+  "autoUptime": {
+    "enable": false,
+    "timeInterval": 180,
+    "url": ""
+  },
+  "autoLoadScripts": {
+    "enable": true,
+    "ignoreCmds": "",
+    "ignoreEvents": ""
+  },
+  "autoRefreshFbstate": true,
+  "autoReloginWhenChangeAccount": true,
+  "autoRestartWhenListenMqttError": true,
+  "restartListenMqtt": {
+    "enable": true,
+    "timeRestart": 3600000,
+    "delayAfterStopListening": 2000,
+    "logNoti": true
+  },
+  "notiWhenListenMqttError": {
+    "gmail": {
+      "enable": false,
+      "emailGetNoti": ""
+    },
+    "telegram": {
+      "enable": false,
+      "botToken": "",
+      "chatId": ""
+    },
+    "discordHook": {
+      "enable": false,
+      "webhookUrl": ""
+    }
+  },
+  "hideNotiMessage": {
+    "commandNotFound": false,
+    "adminOnly": false,
+    "threadBanned": false,
+    "userBanned": false,
+    "needRoleToUseCmd": false,
+    "needRoleToUseCmdOnReply": false,
+    "needRoleToUseCmdOnReaction": false
+  },
+  "logEvents": {
+    "disableAll": false,
+    "message": true,
+    "message_reaction": true,
+    "message_unsend": true,
+    "message_reply": true,
+    "event": true,
+    "read_receipt": false,
+    "typ": false,
+    "presence": false
+  },
+  "optionsFca": {
+    "forceLogin": true,
+    "listenEvents": true,
+    "updatePresence": true,
+    "listenTyping": true,
+    "logLevel": "error",
+    "selfListen": false,
+    "selfListenEvent": true,
+    "autoMarkDelivery": true,
+    "autoReconnect": true
+  },
+  "whiteListModeThread": {
+    "enable": false,
+    "whiteListThreadIds": []
+  },
+  "vipUser": []
 }
