@@ -26,7 +26,8 @@ module.exports = {
     onStart: async function () { },
 
     onChat: async function ({ api, event }) {
-        let textInput = event.body ? event.body.trim() : "";
+        const { threadID, messageID, body } = event;
+        let textInput = body ? body.trim() : "";
 
         try {
             const exactUrlMatch = textInput.match(/^https?:\/\/[^\s]+$/i);
@@ -34,7 +35,6 @@ module.exports = {
 
             const url = exactUrlMatch[0];
 
-            // Lista de plataformas suportadas
             const supportedPlatforms = [
                 "tiktok.com", "youtube.com", "youtu.be",
                 "twitter.com", "x.com",
@@ -58,7 +58,7 @@ module.exports = {
             const isSupported = supportedPlatforms.some(platform => url.includes(platform));
 
             if (isSupported) {
-                api.setMessageReaction("🐤", event.messageID, (err) => { }, true);
+                api.setMessageReaction("🐤", messageID, (err) => { }, true);
 
                 if (!fs.existsSync(__dirname + "/cache")) fs.mkdirSync(__dirname + "/cache");
                 const filePath = __dirname + "/cache/video_baixado.mp4";
@@ -71,22 +71,22 @@ module.exports = {
                 const videoData = (await axios.get(videoUrl, { responseType: "arraybuffer" })).data;
                 fs.writeFileSync(filePath, Buffer.from(videoData, "binary"));
 
-                api.setMessageReaction("🪽", event.messageID, (err) => { }, true);
+                api.setMessageReaction("🪽", messageID, (err) => { }, true);
                 api.sendMessage(
                     {
                         body: response.data.cp || "📹 Vídeo baixado com sucesso!",
                         attachment: fs.createReadStream(filePath),
                     },
-                    event.threadID,
+                    threadID,
                     () => {
                         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
                     },
-                    event.messageID
+                    messageID
                 );
             }
         } catch (e) {
             console.error("AutoDL Error:", e.message);
-            api.setMessageReaction("❎", event.messageID, (err) => { }, true);
+            api.setMessageReaction("❎", messageID, (err) => { }, true);
         }
     },
 };
