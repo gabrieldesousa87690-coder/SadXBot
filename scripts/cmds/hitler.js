@@ -12,7 +12,7 @@ module.exports = {
                 name: "hitler",
                 aliases: ["nazi"],
                 version: "1.7",
-                author: "Gerson",
+                author: "MahMUD",
                 countDown: 10,
                 role: 0,
                 description: {
