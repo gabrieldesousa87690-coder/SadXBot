@@ -12,7 +12,7 @@ module.exports = {
                 name: "jail",
                 aliases: ["prisao"],
                 version: "1.7",
-                author: "Gerson",
+                author: "MahMUD",
                 countDown: 10,
                 role: 0,
                 description: {
