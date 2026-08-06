@@ -25,7 +25,7 @@ module.exports.onStart = async ({ event, api, args }) => {
     const mention = Object.keys(event.mentions)[0] || (event.messageReply && event.messageReply.senderID);
 
     if (!mention)
-      return api.sendMessage("Please tag or reply to 1 person", threadID, messageID);
+      return api.sendMessage("Baby 🥺🌸, use a tag ou responda com o comando no alvo.", threadID, messageID);
 
     const user1 = senderID;
     const user2 = mention;

@@ -10,7 +10,7 @@ module.exports = {
                 name: "emojimix",
                 aliases: ["mix", "emojis"],
                 version: "1.7",
-                author: "Gerson",
+                author: "MahMud",
                 countDown: 5,
                 role: 0,
                 description: {

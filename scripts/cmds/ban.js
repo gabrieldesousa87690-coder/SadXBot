@@ -5,7 +5,7 @@ module.exports = {
 	config: {
 		name: "ban",
 		version: "1.4",
-		author: "Gerson",
+		author: "MahMUD",
 		countDown: 5,
 		role: 1,
 		description: {
@@ -31,7 +31,7 @@ module.exports = {
 			existedBan: "❌ | Esta pessoa já foi banida anteriormente!",
 			noReason: "Sem motivo",
 			bannedSuccess: "✅ | %1 foi banido do grupo!",
-			needAdmin: "⚠️ | O bot precisa de permissão de administrador para expulsar membros banidos",
+			needAdmin: "⚠️ | Baby, eu não sou administrador aqui, adicione o bot como admin para usar essa função.",
 			noName: "Usuário do Facebook",
 			noData: "📑 | Não há membros banidos neste grupo",
 			listBanned: "📑 | Lista de membros banidos neste grupo (página %1/%2)",

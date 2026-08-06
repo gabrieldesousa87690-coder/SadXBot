@@ -15,7 +15,7 @@ module.exports.config = {
   name: "myboy",
   version: "1.7",
   role: 0,
-  author: "Gerson",
+  author: "MahMud",
   category: "love",
   cooldowns: 5,
   description: {

@@ -11,7 +11,7 @@ module.exports = {
         config: {
                 name: "pair",
                 version: "1.7",
-                author: "Gerson",
+                author: "MahMud",
                 countDown: 10,
                 role: 0,
                 description: {

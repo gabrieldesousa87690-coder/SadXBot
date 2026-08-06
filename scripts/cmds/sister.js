@@ -9,10 +9,10 @@ const baseApiUrl = async () => {
 
 module.exports = {
         config: {
-                name: "brother",
-                aliases: ["bro", "irmão"],
+                name: "sister",
+                aliases: ["sis", "irma"],
                 version: "1.7",
-                author: "MahMud",
+                author: "MahMUD",
                 countDown: 5,
                 role: 0,
                 description: {
@@ -28,8 +28,8 @@ module.exports = {
                 pt: {
                         noTarget: "× Baby, por favor marque ou responda a alguém! 🎀",
                         wait: "⌛ Gerando sua imagem... Por favor, aguarde um momento baby! <😘",
-                        success: "𝐀 𝐯𝐢𝐝𝐚 é 𝐦𝐞𝐥𝐡𝐨𝐫 𝐜𝐨𝐦 𝐮𝐦 𝐈𝐫𝐦ã𝐨 𝐚𝐨 𝐬𝐞𝐮 𝐥𝐚𝐝𝐨 🎀",
-                        error: "× Erro na API: %1. Contate Gerson para ajuda."
+                        success: "𝐀 𝐯𝐢𝐝𝐚 é 𝐦𝐞𝐥𝐡𝐨𝐫 𝐜𝐨𝐦 𝐮𝐦𝐚 𝐈𝐫𝐦ã 𝐚𝐨 𝐬𝐞𝐮 𝐥𝐚𝐝𝐨 🎀",
+                        error: "× Erro na API: %1. Contate MahMUD para ajuda."
                 }
         },
 
@@ -42,11 +42,11 @@ module.exports = {
                 const mention = Object.keys(event.mentions)[0] || (event.messageReply && event.messageReply.senderID);
                 if (!mention) return message.reply(getLang("noTarget"));
 
-                const user1 = mention;
-                const user2 = event.senderID;
+                const user1 = event.senderID;
+                const user2 = mention;
                 const cacheDir = path.join(__dirname, "cache");
                 if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
-                const imgPath = path.join(cacheDir, `brother_${user1}_${user2}.png`);
+                const imgPath = path.join(cacheDir, `sister_${user1}_${user2}.png`);
 
                 try {
                         api.setMessageReaction("🎀", event.messageID, () => {}, true);
@@ -69,7 +69,7 @@ module.exports = {
                         });
 
                 } catch (err) {
-                        console.error("Brother Error:", err);
+                        console.error("Sister Error:", err);
                         api.setMessageReaction("❌", event.messageID, () => {}, true);
                         if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
                         return message.reply(getLang("error", err.message));

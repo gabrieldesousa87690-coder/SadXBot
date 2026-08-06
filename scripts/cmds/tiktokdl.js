@@ -8,27 +8,27 @@ const baseApiUrl = async () => {
 
 module.exports = {
         config: {
-                name: "alldl",
-                aliases: ["download", "dl"],
+                name: "tiktokdl",
+                aliases: ["ttdl", "tikdl"],
                 version: "1.7",
                 author: "MahMUD",
                 countDown: 10,
                 role: 0,
                 description: {
-                        pt: "Baixe vídeos de qualquer rede social"
+                        pt: "Baixe vídeos do TikTok"
                 },
                 category: "media",
                 guide: {
-                        pt: '   {pn} <link>: Forneça o link do vídeo'
+                        pt: '   {pn} <link>: Forneça o link do vídeo do TikTok'
                                 + '\n   Ou responda a um link com {pn}'
-                                + '\n\nPlataformas Suportadas:\n• TikTok\n• YouTube / Shorts\n• Facebook / FB Watch\n• Instagram / Reels\n• Twitter (X)\n• Threads\n• Snapchat\n• Pinterest\n• Spotify\n• SoundCloud\n• Reddit\n• LinkedIn\n• CapCut\n• Dailymotion\n• Kwai / Kuaishou\n• Douyin\n• Bluesky\n• Tumblr'
+                                + '\n\nPlataformas Suportadas:\n• TikTok / Douyin'
                 }
         },
 
         langs: {
                 pt: {
-                        noLink: "× Baby, forneça um link de vídeo válido ou responda a um!",
-                        error: "× Erro no download: %1. Contate Gerson para ajuda.\n•WhatsApp: 01836298139"
+                        noLink: "× Baby, forneça um link válido do TikTok ou responda a um!",
+                        error: "× Erro no download: %1. Contate MahMUD para ajuda.\n•WhatsApp: 01836298139"
                 }
         },
 
@@ -45,39 +45,17 @@ module.exports = {
                 }
 
                 if (!(
-                        mahmud.includes("tiktok.com") ||
-                        mahmud.includes("youtube.com") || 
-                        mahmud.includes("youtu.be") ||
-                        mahmud.includes("twitter.com") || 
-                        mahmud.includes("x.com") ||
-                        mahmud.includes("facebook.com") || 
-                        mahmud.includes("fb.watch") ||
-                        mahmud.includes("instagram.com") ||
-                        mahmud.includes("tumblr.com") ||
-                        mahmud.includes("threads.net") ||
-                        mahmud.includes("spotify.com") ||
-                        mahmud.includes("soundcloud.com") ||
-                        mahmud.includes("snapchat.com") ||
-                        mahmud.includes("reddit.com") ||
-                        mahmud.includes("pinterest.com") || 
-                        mahmud.includes("pin.it") ||
-                        mahmud.includes("linkedin.com") ||
-                        mahmud.includes("kuaishou.com") || 
-                        mahmud.includes("kwai.com") ||
-                        mahmud.includes("douyin.com") ||
-                        mahmud.includes("dailymotion.com") || 
-                        mahmud.includes("dai.ly") ||
-                        mahmud.includes("capcut.com") ||
-                        mahmud.includes("bsky.app")
+                        mahmud.includes("tiktok.com") || 
+                        mahmud.includes("douyin.com")
                 )) {
                         return message.reply(getLang("noLink"));
                 }
 
                 if (!fs.existsSync(__dirname + "/cache")) fs.mkdirSync(__dirname + "/cache");
-                const path = __dirname + `/cache/alldl_${Date.now()}.mp4`;
+                const path = __dirname + `/cache/ttdl_${Date.now()}.mp4`;
 
                 try {
-                        api.setMessageReaction("💜", event.messageID, () => {}, true);
+                        api.setMessageReaction("🐤", event.messageID, () => {}, true);
                         
                         const base = await baseApiUrl();
                         const apiUrl = `${base}/api/download?url=${encodeURIComponent(mahmud)}`;
@@ -98,7 +76,7 @@ module.exports = {
 
                         fs.writeFileSync(path, Buffer.from(response.data, "binary"));
 
-                        api.setMessageReaction("😺", event.messageID, () => {}, true);
+                        api.setMessageReaction("🪽", event.messageID, () => {}, true);
 
                         return message.reply(
                                 {
@@ -109,8 +87,8 @@ module.exports = {
                         );
 
                 } catch (err) {
-                        console.error("Error in alldl command:", err);
-                        api.setMessageReaction("💔", event.messageID, () => {}, true);
+                        console.error("Error in tiktokdl command:", err);
+                        api.setMessageReaction("❎", event.messageID, () => {}, true);
                         if (fs.existsSync(path)) fs.unlinkSync(path);
                         return message.reply(getLang("error", err.message));
                 }

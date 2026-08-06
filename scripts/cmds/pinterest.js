@@ -12,7 +12,7 @@ module.exports = {
                 name: "pin",
                 aliases: ["pinterest", "pic", "imagem"],
                 version: "1.7",
-                author: "Gerson",
+                author: "MahMud",
                 countDown: 10,
                 role: 0,
                 description: {

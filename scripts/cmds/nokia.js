@@ -9,7 +9,7 @@ module.exports = {
         config: {
                 name: "nokia",
                 version: "1.7",
-                author: "Gerson",
+                author: "MahMud",
                 countDown: 5,
                 role: 0,
                 description: {

@@ -11,7 +11,7 @@ module.exports = {
         config: {
                 name: "hack",
                 version: "1.7",
-                author: "Gerson",
+                author: "MahMud",
                 countDown: 5,
                 role: 0,
                 description: {

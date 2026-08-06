@@ -2,7 +2,7 @@ module.exports = {
 	config: {
 		name: "kick",
 		version: "1.3",
-		author: "Gerson",
+		author: "NTKhang",
 		countDown: 5,
 		role: 1,
 		description: {
