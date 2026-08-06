@@ -408,6 +408,7 @@ async function loadScripts(api) {
             const name = cmd.config.name;
             global.SadXBot.commands.set(name, cmd);
             loaded++;
+            log.success("LOAD", `✅ ${file} carregado`);
         } catch (e) {
             errors++;
             log.error("LOAD", `❌ ${file}: ${e.message}`);
@@ -418,48 +419,146 @@ async function loadScripts(api) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🎯 13. HANDLER DE EVENTOS
+// 🎯 13. HANDLER DE EVENTOS (CORRIGIDO)
 // ═══════════════════════════════════════════════════════════════
 
 function handleEvent(api, event) {
-    const { threadID, messageID, senderID, body } = event;
-
-    if (senderID === api.getCurrentUserID()) return;
-
-    if (config.whiteListMode?.enable) {
-        if (!config.whiteListMode.whiteListIds.includes(senderID) &&
-            !config.adminBot.includes(senderID)) {
+    try {
+        // 🔥 LOG BRUTO DO EVENTO - PRA VER SE ESTÁ CHEGANDO ALGO
+        console.log("📨 EVENTO BRUTO:", JSON.stringify(event, null, 2));
+        console.log("📨 TIPO:", event.type);
+        console.log("📨 BODY:", event.body);
+        
+        // 🔥 PULA EVENTOS DO PRÓPRIO BOT
+        if (event.senderID === api.getCurrentUserID()) {
+            log.info("HANDLER", "⏭️ Ignorando mensagem do próprio bot");
             return;
         }
-    }
-
-    if (body && body.startsWith(config.prefix || '!')) {
-        const args = body.slice(config.prefix.length).split(' ');
-        const commandName = args.shift().toLowerCase();
-
-        const command = global.SadXBot.commands.get(commandName) ||
-                        global.SadXBot.commands.get(global.SadXBot.aliases.get(commandName));
-
-        if (command) {
-            log.info("COMANDO", `📩 ${commandName} de ${senderID}`);
-            try {
-                command.onStart({
-                    api,
-                    event,
-                    args,
-                    usersData: global.db.usersData,
-                    threadsData: global.db.threadsData
-                });
-            } catch (e) {
-                log.error("COMANDO", `❌ ${commandName}: ${e.message}`);
-                api.sendMessage(`❌ Erro: ${e.message}`, threadID, messageID);
+        
+        // 🔥 SÓ PROCESSA MENSAGENS DE TEXTO
+        if (event.type !== 'message' && event.type !== 'message_reply') {
+            log.info("HANDLER", `⏭️ Ignorando tipo: ${event.type}`);
+            return;
+        }
+        
+        const { threadID, messageID, senderID, body } = event;
+        
+        // 🔥 LOG DA MENSAGEM
+        log.info("MENSAGEM", `📨 De: ${senderID} | Na thread: ${threadID}`);
+        log.info("MENSAGEM", `💬 "${body || '[sem texto]'}"`);
+        
+        // 🔥 VERIFICA WHITELIST
+        if (config.whiteListMode?.enable) {
+            if (!config.whiteListMode.whiteListIds.includes(senderID?.toString()) &&
+                !config.adminBot.includes(senderID?.toString())) {
+                log.info("WHITELIST", `⏭️ Usuário ${senderID} não está na whitelist`);
+                return;
             }
         }
+        
+        // 🔥 VERIFICA SE É COMANDO
+        if (!body || !body.startsWith(config.prefix || '!')) {
+            log.info("MENSAGEM", "⏭️ Não é um comando");
+            return;
+        }
+        
+        // 🔥 EXTRAI O COMANDO
+        const args = body.slice(config.prefix.length).trim().split(/\s+/);
+        const commandName = args.shift().toLowerCase();
+        
+        log.info("COMANDO", `⚡ Comando: ${commandName} | Args: ${args.length}`);
+        
+        // 🔥 BUSCA O COMANDO
+        let command = global.SadXBot.commands.get(commandName);
+        if (!command) {
+            const alias = global.SadXBot.aliases.get(commandName);
+            if (alias) command = global.SadXBot.commands.get(alias);
+        }
+        
+        if (!command) {
+            log.warn("COMANDO", `❌ Comando não encontrado: ${commandName}`);
+            api.sendMessage(`❌ Comando "${commandName}" não encontrado. Use ${config.prefix}help`, threadID);
+            return;
+        }
+        
+        // 🔥 EXECUTA O COMANDO
+        log.success("COMANDO", `✅ Executando: ${commandName}`);
+        try {
+            const result = command.onStart({
+                api,
+                event,
+                args,
+                usersData: global.db.usersData,
+                threadsData: global.db.threadsData,
+                utils: global.utils,
+                config: global.SadXBot.config,
+                prefix: global.SadXBot.prefix
+            });
+            
+            // Se for Promise, espera
+            if (result && typeof result.then === 'function') {
+                result.catch(error => {
+                    log.error("COMANDO", `❌ Erro na promise: ${error.message}`);
+                    api.sendMessage(`❌ Erro: ${error.message}`, threadID);
+                });
+            }
+        } catch (error) {
+            log.error("COMANDO", `❌ Erro ao executar ${commandName}: ${error.message}`);
+            api.sendMessage(`❌ Erro: ${error.message}`, threadID);
+        }
+        
+    } catch (error) {
+        log.error("HANDLER", `❌ Erro crítico: ${error.message}`);
+        console.error(error.stack);
     }
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🔄 14. AUTO RESTART
+// 📡 14. LISTENER CORRIGIDO PARA MAHMUD-FCA
+// ═══════════════════════════════════════════════════════════════
+
+function startListener(api) {
+    log.info("LISTENER", "📡 Iniciando listener MQTT...");
+    
+    // 🔥 LISTENER PRINCIPAL
+    api.listenMqtt((err, event) => {
+        if (err) {
+            log.error("LISTENER", `❌ Erro no MQTT: ${err.message || err}`);
+            log.info("LISTENER", "🔄 Tentando reconectar em 5 segundos...");
+            
+            // Tenta reconectar
+            setTimeout(() => {
+                log.info("LISTENER", "🔄 Reconectando...");
+                startListener(api);
+            }, 5000);
+            return;
+        }
+        
+        // 🔥 SÓ PROCESSA SE TIVER EVENTO
+        if (!event) {
+            log.warn("LISTENER", "⚠️ Evento vazio recebido");
+            return;
+        }
+        
+        // 📝 LOG DO QUE RECEBEU
+        log.info("LISTENER", `📩 Evento: ${event.type || 'desconhecido'} | Thread: ${event.threadID || 'N/A'}`);
+        
+        // 🔥 PROCESSA O EVENTO
+        try {
+            handleEvent(api, event);
+        } catch (error) {
+            log.error("LISTENER", `❌ Erro ao processar: ${error.message}`);
+        }
+    });
+    
+    // 🔥 HEARTBEAT - Verifica se o listener ainda está vivo
+    setInterval(() => {
+        log.info("HEARTBEAT", "💓 Listener ativo...");
+    }, 60000); // A cada 1 minuto
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🔄 15. AUTO RESTART
 // ═══════════════════════════════════════════════════════════════
 
 function setupAutoRestart() {
@@ -479,7 +578,7 @@ function setupAutoRestart() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🚀 15. INICIALIZAÇÃO
+// 🚀 16. INICIALIZAÇÃO
 // ═══════════════════════════════════════════════════════════════
 
 (async function startBot() {
@@ -510,13 +609,8 @@ function setupAutoRestart() {
 
             setupAutoRestart();
 
-            api.listenMqtt((err, event) => {
-                if (err) {
-                    log.error("LISTENER", `Erro: ${err}`);
-                    return;
-                }
-                handleEvent(api, event);
-            });
+            // 🔥 USA O LISTENER CORRIGIDO
+            startListener(api);
         });
 
     } catch (error) {
