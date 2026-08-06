@@ -1,5 +1,5 @@
 {
-  "name": "SadXbot-V1",
+  "name": "hinata-bot-v3",
   "version": "1.6.00",
   "description": "A simple Bot chat messenger using personal account.",
   "main": "index.js",
@@ -80,14 +80,15 @@
     "dev": "set NODE_ENV=development&& node index.js",
     "prod": "set NODE_ENV=production&& node index.js"
   },
-  "author": "gerson",
+  "author": "MahMUD",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/mahmudx7/Hinata-Bot-v3.git"
   },
   "keywords": [],
   "bugs": {
-    "url": ""
+    "url": "https://github.com/mahmudx7/Hinata-Bot-v3/issues"
   },
-  "homepage": ""
+  "homepage": "https://github.com/mahmudx7/Hinata-Bot-v3#readme"
+}
