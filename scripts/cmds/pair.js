@@ -24,41 +24,45 @@ module.exports = {
         }
     },
 
-    onStart: async function ({ api, event, message }) {
-        const outputPath = path.join(__dirname, "cache", `pair_${event.senderID}_${Date.now()}.png`);
-        if (!fs.existsSync(path.dirname(outputPath))) fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    onStart: async function ({ api, event }) {
+        const { threadID, messageID, senderID } = event;
+        const outputPath = path.join(__dirname, "cache", `pair_${senderID}_${Date.now()}.png`);
+        
+        if (!fs.existsSync(path.dirname(outputPath))) {
+            fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+        }
 
         try {
-            api.setMessageReaction("😘", event.messageID, () => { }, true);
+            api.setMessageReaction("😘", messageID, () => { }, true);
 
-            const threadData = await api.getThreadInfo(event.threadID);
+            const threadData = await api.getThreadInfo(threadID);
             const users = threadData.userInfo;
-            const myData = users.find((u) => u.id === event.senderID);
+            const myData = users.find((u) => u.id === senderID);
 
             if (!myData || !myData.gender) {
-                return message.reply("❌ Seu gênero não está definido no seu perfil do Facebook.");
+                return api.sendMessage("❌ Seu gênero não está definido no seu perfil do Facebook.", threadID, messageID);
             }
 
             const myGender = myData.gender.toUpperCase();
             let matchCandidates = [];
 
             if (myGender === "MALE") {
-                matchCandidates = users.filter((u) => u.gender === "FEMALE" && u.id !== event.senderID);
+                matchCandidates = users.filter((u) => u.gender === "FEMALE" && u.id !== senderID);
             } else if (myGender === "FEMALE") {
-                matchCandidates = users.filter((u) => u.gender === "MALE" && u.id !== event.senderID);
+                matchCandidates = users.filter((u) => u.gender === "MALE" && u.id !== senderID);
             } else {
-                matchCandidates = users.filter((u) => u.id !== event.senderID);
+                matchCandidates = users.filter((u) => u.id !== senderID);
             }
 
             if (matchCandidates.length === 0) {
-                api.setMessageReaction("🥺", event.messageID, () => { }, true);
-                return message.reply("❌ Desculpe, não encontrei ninguém para você neste grupo 😢");
+                api.setMessageReaction("🥺", messageID, () => { }, true);
+                return api.sendMessage("❌ Desculpe, não encontrei ninguém para você neste grupo 😢", threadID, messageID);
             }
 
             const selectedMatch = matchCandidates[Math.floor(Math.random() * matchCandidates.length)];
             const apiUrl = await baseApiUrl();
 
-            const { data } = await axios.get(`${apiUrl}/api/pair/mahmud?user1=${event.senderID}&user2=${selectedMatch.id}&style=3`, {
+            const { data } = await axios.get(`${apiUrl}/api/pair/mahmud?user1=${senderID}&user2=${selectedMatch.id}&style=3`, {
                 responseType: "arraybuffer"
             });
 
@@ -74,19 +78,19 @@ module.exports = {
                 `❤️  ${name2}\n\n` +
                 `📊 Compatibilidade: ${percentage}%`;
 
-            return message.reply({
+            return api.sendMessage({
                 body: msg,
                 attachment: fs.createReadStream(outputPath)
-            }, () => {
-                api.setMessageReaction("✅", event.messageID, () => { }, true);
+            }, threadID, () => {
+                api.setMessageReaction("✅", messageID, () => { }, true);
                 if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-            });
+            }, messageID);
 
         } catch (err) {
             console.error("Pair Error:", err);
-            api.setMessageReaction("❌", event.messageID, () => { }, true);
+            api.setMessageReaction("❌", messageID, () => { }, true);
             if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-            return message.reply(`❌ Erro: ${err.message}`);
+            return api.sendMessage(`❌ Erro: ${err.message}`, threadID, messageID);
         }
     }
 };
