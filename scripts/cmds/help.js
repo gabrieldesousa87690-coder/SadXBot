@@ -67,7 +67,7 @@ module.exports = {
         // 🔥 MONTA A MENSAGEM (VERSÃO COMPACTA)
         const sortedCategories = Object.keys(categories).sort();
         let msg = `╔══════════════════════════╗\n`;
-        msg += `║ 📋 LISTA DE COMANDOS ║\n`;
+        msg += `║ 📋 LISTA DE COMANDOS   ║\n`;
         msg += `╠══════════════════════════╣\n`;
 
         for (const category of sortedCategories) {
