@@ -558,27 +558,7 @@ function startListener(api) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🔄 15. AUTO RESTART
-// ═══════════════════════════════════════════════════════════════
-
-function setupAutoRestart() {
-    const autoRestart = config.autoRestart;
-    if (!autoRestart) return;
-
-    const time = autoRestart.time;
-    if (!time) return;
-
-    if (!isNaN(time) && time > 0) {
-        log.info("AUTO RESTART", `⏰ Reiniciará em ${Math.floor(time / 60000)} minutos`);
-        setTimeout(() => {
-            log.info("AUTO RESTART", "🔄 Reiniciando...");
-            process.exit(2);
-        }, time);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 🚀 16. INICIALIZAÇÃO
+// 🚀 15. INICIALIZAÇÃO
 // ═══════════════════════════════════════════════════════════════
 
 (async function startBot() {
@@ -607,7 +587,7 @@ function setupAutoRestart() {
             log.info("START", `💡 Prefixo: ${config.prefix || '!'}`);
             log.info("START", `👑 Admins: ${config.adminBot?.length || 0}`);
 
-            setupAutoRestart();
+            // 🔥 AUTO RESTART REMOVIDO - O BOT NÃO VAI MAIS DESLIGAR SOZINHO!
 
             // 🔥 USA O LISTENER CORRIGIDO
             startListener(api);
