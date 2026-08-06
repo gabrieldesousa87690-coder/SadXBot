@@ -1,7 +1,7 @@
 module.exports = {
     config: {
         name: "help",
-        aliases: ["ajuda", "comandos"],
+        aliases: ["ajuda"],
         version: "2.2",
         author: "SadX",
         countDown: 5,
@@ -64,25 +64,26 @@ module.exports = {
             categories[category].push(name);
         }
 
-        // 🔥 MONTA A MENSAGEM
+        // 🔥 MONTA A MENSAGEM (VERSÃO COMPACTA)
         const sortedCategories = Object.keys(categories).sort();
-        let msg = `╔══════════════════════════════════╗\n`;
-        msg += `║   📋 **LISTA DE COMANDOS**    ║\n`;
-        msg += `╠══════════════════════════════════╣\n`;
+        let msg = `╔══════════════════════════╗\n`;
+        msg += `║ 📋 LISTA DE COMANDOS ║\n`;
+        msg += `╠══════════════════════════╣\n`;
 
         for (const category of sortedCategories) {
             const cmds = categories[category].sort();
-            msg += `┃ ✦ ${category.toUpperCase()}\n`;
-            for (const cmd of cmds) {
-                msg += `┃   ✧ ${cmd}\n`;
-            }
+            msg += `┃ ✦ ${category}\n`;
+            msg += `┃   ✧ ${cmds.join(', ')}\n`;
             msg += `┃\n`;
         }
 
-        msg += `╠══════════════════════════════════╣\n`;
-        msg += `║ 📦 Total: ${commandList.length} comandos ║\n`;
-        msg += `╚══════════════════════════════════╝\n\n`;
-        msg += `💡 Use ${prefix}help <comando> para ver detalhes.`;
+        msg += `╠══════════════════════════╣\n`;
+        msg += `║ 👑 Owner: Gerson         ║\n`;
+        msg += `║ 📱 m.me/gerson.azael0    ║\n`;
+        msg += `╠══════════════════════════╣\n`;
+        msg += `║ 📦 Total: ${String(commandList.length).padStart(2)} comandos ║\n`;
+        msg += `╚══════════════════════════╝\n\n`;
+        msg += `💡 Use ${prefix}help <comando>`;
 
         return api.sendMessage(msg, threadID, messageID);
     }
