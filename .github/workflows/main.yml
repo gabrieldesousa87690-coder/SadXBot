@@ -1,113 +1,47 @@
-name: Deploy Bot
+name: Node.js CI
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch para deploy'
-        required: true
-        default: 'main'
-        type: string
-      update_files:
-        description: 'Sobrescrever arquivos existentes'
-        required: false
-        default: false
-        type: boolean
-
   push:
-    branches:
-      - main
-      - master
-    paths:
-      - 'scripts/**'
-      - 'config.json'
-      - 'configCommands.json'
-      - 'account.txt'
-      - 'index.js'
-      - 'package.json'
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # 🔥 PERMITE RODAR MANUALMENTE
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 360  # 🔥 6 HORAS
+
     steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch || 'main' }}
-          fetch-depth: 0
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
 
-      - name: 🔧 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
 
-      - name: 📦 Generate package-lock.json
-        run: |
-          if [ ! -f "package-lock.json" ]; then
-            echo "📦 Gerando package-lock.json..."
-            npm install --package-lock-only
-          fi
+    - run: npm install
 
-      - name: 📦 Install dependencies
-        run: |
-          if [ -f "package-lock.json" ]; then
-            npm ci
-          else
-            npm install
-          fi
-          npm install -g jsonlint
+    - run: npm start
 
-      - name: ✅ Validate JSON files
-        run: |
-          jsonlint config.json || exit 1
-          jsonlint configCommands.json || exit 1
-
-      - name: 💾 Backup existing data
-        if: github.event.inputs.update_files == 'false'
-        run: |
-          if [ -d "database/data" ]; then
-            mkdir -p backup
-            cp -r database/data backup/
-            echo "📦 Backup criado"
-          fi
-
-      - name: 🔄 Overwrite files
-        if: github.event.inputs.update_files == 'true'
-        run: |
-          echo "🔄 Sobrescrevendo arquivos..."
-          if [ -d "database/data" ]; then
-            rm -rf database/data
-          fi
-          mkdir -p database/data
-          echo "✅ Dados sobrescritos"
-
-      - name: 📁 Prepare deploy files
-        run: |
-          if [ ! -f "account.txt" ]; then
-            echo "[]" > account.txt
-          fi
-          echo "{\"last_deploy\": \"$(date -Iseconds)\", \"branch\": \"${{ github.ref_name }}\"}" > deploy_status.json
-
-      - name: ✅ Success notification
-        if: success()
-        run: |
-          echo "✅ Deploy concluído com sucesso!"
-          echo "📅 Data: $(date)"
-          echo "🌿 Branch: ${{ github.ref_name }}"
-
-      - name: ⚠️ Failure notification
-        if: failure()
-        run: |
-          echo "❌ Falha no deploy!"
-          echo "📅 Data: $(date)"
-          echo "🌿 Branch: ${{ github.ref_name }}"
-
-      - name: 📦 Upload backup
-        if: always() && github.event.inputs.update_files == 'false'
-        uses: actions/upload-artifact@v4
-        with:
-          name: backup-data
-          path: backup/
-          retention-days: 7
+    # 🔥 SALVA TUDO
+    - name: Salvar dados
+      if: always()
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # 🔥 ADICIONA TODOS OS JSONS
+        find . -name "*.json" -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
+          git add "$file" 2>/dev/null || true
+        done
+        
+        if git diff --staged --quiet; then
+          echo "📝 Sem mudanças"
+        else
+          git commit -m "🔄 Atualiza dados [skip ci]"
+          git push
+          echo "✅ Dados salvos!"
+        fi
