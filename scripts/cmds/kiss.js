@@ -12,7 +12,7 @@ module.exports = {
                 name: "kiss",
                 aliases: ["beijo"],
                 version: "1.7",
-                author: "Gerson",
+                author: "MahMUD",
                 countDown: 5,
                 role: 0,
                 description: {
