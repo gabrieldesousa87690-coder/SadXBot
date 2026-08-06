@@ -12,7 +12,7 @@ module.exports = {
         name: "ytb",
         aliases: ["youtube", "yt"],
         version: "2.7",
-        author: "gerson",
+        author: "MahMUD",
         countDown: 10,
         role: 0,
         description: {
@@ -30,7 +30,7 @@ module.exports = {
         }
     },
 
-    onStart: async function ({ api, args, message, event, commandName }) {
+    onStart: async function ({ api, args, event, commandName }) {
         const { threadID, messageID, senderID } = event;
 
         let type;
@@ -50,28 +50,38 @@ module.exports = {
                 type = "info";
                 break;
             default:
-                return message.SyntaxError();
+                return api.sendMessage(
+                    `❌ Uso correto: !ytb -v <nome> ou !ytb -a <nome> ou !ytb -i <nome>`,
+                    threadID,
+                    messageID
+                );
         }
 
         const input = args.slice(1).join(" ");
-        if (!input) return message.SyntaxError();
+        if (!input) {
+            return api.sendMessage(
+                `❌ Digite o nome do vídeo ou link!`,
+                threadID,
+                messageID
+            );
+        }
 
         const apiUrl = await baseApiUrl();
         const checkurl = /^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))((\w|-){11})(?:\S+)?$/;
 
         if (checkurl.test(input)) {
             const videoID = input.match(checkurl)[1];
-            api.setMessageReaction("🌸", messageID, () => { }, true);
+            api.setMessageReaction("🐤", messageID, () => { }, true);
             if (type === 'info') return fetchInfo(api, threadID, messageID, videoID, apiUrl);
             return handleDownload(api, threadID, messageID, videoID, type, apiUrl);
         }
 
         try {
-            api.setMessageReaction("🌸", messageID, () => { }, true);
+            api.setMessageReaction("🐤", messageID, () => { }, true);
             const res = await axios.get(`${apiUrl}/api/ytb/search?q=${encodeURIComponent(input)}`);
             const results = res.data.results.slice(0, 6);
             if (!results || results.length === 0) {
-                return api.sendMessage(`💔🌸 baby, nenhum resultado encontrado para "${input}"`, threadID, messageID);
+                return api.sendMessage(`⭕ Nenhum resultado encontrado para "${input}"`, threadID, messageID);
             }
 
             let msg = "";
@@ -107,13 +117,15 @@ module.exports = {
         }
     },
 
-    onReply: async function ({ event, api, Reply }) {
+    onReply: async function ({ api, event, Reply }) {
+        const { threadID, messageID, senderID, body } = event;
         const { results, type, apiUrl, author, menuMessageID } = Reply;
-        if (event.senderID !== author) return;
+        
+        if (senderID !== author) return;
 
         const targetMessageID = menuMessageID || Reply.messageID;
 
-        const choice = parseInt(event.body);
+        const choice = parseInt(body);
         if (isNaN(choice) || choice <= 0 || choice > results.length) {
             return api.unsendMessage(targetMessageID);
         }
@@ -121,10 +133,10 @@ module.exports = {
         const videoID = results[choice - 1].id;
 
         api.unsendMessage(targetMessageID);
-        api.setMessageReaction("⌛", event.messageID, () => { }, true);
+        api.setMessageReaction("⌛", messageID, () => { }, true);
 
-        if (type === 'info') return fetchInfo(api, event.threadID, event.messageID, videoID, apiUrl);
-        await handleDownload(api, event.threadID, event.messageID, videoID, type, apiUrl);
+        if (type === 'info') return fetchInfo(api, threadID, messageID, videoID, apiUrl);
+        await handleDownload(api, threadID, messageID, videoID, type, apiUrl);
     }
 };
 
@@ -151,7 +163,7 @@ async function handleDownload(api, threadID, messageID, videoID, type, apiUrl) {
                 body: `📹 ${title}`,
                 attachment: fs.createReadStream(filePath)
             }, threadID, () => {
-                api.setMessageReaction("💜", messageID, () => { }, true);
+                api.setMessageReaction("✅", messageID, () => { }, true);
                 if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
             }, messageID);
         });
@@ -160,7 +172,7 @@ async function handleDownload(api, threadID, messageID, videoID, type, apiUrl) {
             throw err;
         });
     } catch (e) {
-        api.sendMessage(`❌ Desculpa baby, erro ao baixar: ${e.message}`, threadID, messageID);
+        api.sendMessage(`❌ Erro ao baixar: ${e.message}`, threadID, messageID);
     }
 }
 
@@ -191,7 +203,7 @@ async function fetchInfo(api, threadID, messageID, videoID, apiUrl) {
 
         api.sendMessage({ body: msg, attachment: fs.createReadStream(thumbPath) },
             threadID, () => {
-                api.setMessageReaction("💜", messageID, () => { }, true);
+                api.setMessageReaction("✅", messageID, () => { }, true);
                 if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
             }, messageID);
     } catch (e) {
