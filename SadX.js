@@ -31,7 +31,8 @@ const log = {
     cmd: (tag, msg) => console.log(`⚡ ${tag.padEnd(12)} ${msg}`),
     msg: (tag, msg) => console.log(`💬 ${tag.padEnd(12)} ${msg}`),
     db: (tag, msg) => console.log(`🗄️ ${tag.padEnd(12)} ${msg}`),
-    net: (tag, msg) => console.log(`🌐 ${tag.padEnd(12)} ${msg}`)
+    net: (tag, msg) => console.log(`🌐 ${tag.padEnd(12)} ${msg}`),
+    evt: (tag, msg) => console.log(`📢 ${tag.padEnd(12)} ${msg}`)
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -81,9 +82,9 @@ if (config.whiteListMode?.whiteListIds && Array.isArray(config.whiteListMode.whi
 global.SadXBot = {
     startTime: Date.now() - process.uptime() * 1000,
     commands: new Map(),
-    eventCommands: new Map(),
+    eventCommands: new Map(), // ← NOVO: eventos
     commandFilesPath: [],
-    eventCommandsFilesPath: [],
+    eventCommandsFilesPath: [], // ← NOVO: caminho dos eventos
     aliases: new Map(),
     onFirstChat: [],
     onChat: [],
@@ -390,38 +391,61 @@ async function loadData(api) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 📦 12. LOADSCRIPTS
+// 📦 12. LOADSCRIPTS (COMANDOS E EVENTOS)
 // ═══════════════════════════════════════════════════════════════
 
 async function loadScripts(api) {
+    // ─── COMANDOS ───
     const cmdsPath = path.normalize(process.cwd() + '/scripts/cmds');
     if (!fs.existsSync(cmdsPath)) {
         log.warn("LOAD", "📁 Pasta scripts/cmds não encontrada");
-        return;
-    }
-    const files = fs.readdirSync(cmdsPath).filter(f => f.endsWith('.js') && !f.endsWith('.eg.js'));
+    } else {
+        const files = fs.readdirSync(cmdsPath).filter(f => f.endsWith('.js') && !f.endsWith('.eg.js'));
+        let loaded = 0;
+        let errors = 0;
 
-    let loaded = 0;
-    let errors = 0;
-
-    for (const file of files) {
-        try {
-            const cmd = require(`${cmdsPath}/${file}`);
-            const name = cmd.config.name;
-            global.SadXBot.commands.set(name, cmd);
-            loaded++;
-            log.success("LOAD", `✅ ${file}`);
-        } catch (e) {
-            errors++;
-            log.error("LOAD", `❌ ${file}: ${e.message}`);
+        for (const file of files) {
+            try {
+                const cmd = require(`${cmdsPath}/${file}`);
+                const name = cmd.config.name;
+                global.SadXBot.commands.set(name, cmd);
+                loaded++;
+                log.success("LOAD", `✅ Comando: ${file}`);
+            } catch (e) {
+                errors++;
+                log.error("LOAD", `❌ Comando ${file}: ${e.message}`);
+            }
         }
+        log.success("LOAD", `📦 ${loaded} comandos carregados${errors ? `, ${errors} falhas` : ''}`);
     }
 
-    log.success("LOAD", `📦 ${loaded} comandos carregados${errors ? `, ${errors} falhas` : ''}`);
+    // ─── EVENTOS ───
+    const eventsPath = path.normalize(process.cwd() + '/scripts/events');
+    if (!fs.existsSync(eventsPath)) {
+        log.warn("LOAD", "📁 Pasta scripts/events não encontrada");
+    } else {
+        const files = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js') && !f.endsWith('.eg.js'));
+        let loaded = 0;
+        let errors = 0;
+
+        for (const file of files) {
+            try {
+                const evt = require(`${eventsPath}/${file}`);
+                const name = evt.config.name;
+                global.SadXBot.eventCommands.set(name, evt);
+                loaded++;
+                log.success("LOAD", `✅ Evento: ${file}`);
+            } catch (e) {
+                errors++;
+                log.error("LOAD", `❌ Evento ${file}: ${e.message}`);
+            }
+        }
+        log.success("LOAD", `📦 ${loaded} eventos carregados${errors ? `, ${errors} falhas` : ''}`);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🎯 13. HANDLER DE EVENTOS (VERSÃO CLEAN)
+// 🎯 13. HANDLER DE EVENTOS (COMANDOS + EVENTOS)
 // ═══════════════════════════════════════════════════════════════
 
 function handleEvent(api, event) {
@@ -434,7 +458,37 @@ function handleEvent(api, event) {
         // 🔥 PEGA O TIPO DO EVENTO
         const eventType = event.type || event.event_type || 'unknown';
         
-        // 🔥 SÓ PROCESSA MENSAGENS
+        // 🔥 VERIFICA SE É UM EVENTO DE LOG (ex: entrada/saída, mudança de nome)
+        const isLogEvent = eventType === 'event' || event.logMessageType;
+        
+        if (isLogEvent) {
+            // 🔥 EXECUTA OS EVENTOS DA PASTA scripts/events
+            log.evt("EVENTO", `${event.logMessageType || 'desconhecido'} em ${event.threadID || event.senderID}`);
+            
+            for (const [name, evt] of global.SadXBot.eventCommands) {
+                try {
+                    if (evt.onStart) {
+                        evt.onStart({
+                            api,
+                            event,
+                            threadsData: global.db.threadsData,
+                            usersData: global.db.usersData,
+                            utils: global.utils,
+                            config: global.SadXBot.config,
+                            getLang: (key) => {
+                                // Função simples para pegar idioma (se implementado)
+                                return key;
+                            }
+                        });
+                    }
+                } catch (e) {
+                    log.error("EVENTO", `❌ ${name}: ${e.message}`);
+                }
+            }
+            return;
+        }
+        
+        // 🔥 SÓ PROCESSA MENSAGENS SE NÃO FOR EVENTO DE LOG
         const isMessage = eventType === 'message' || 
                          eventType === 'message_reply' || 
                          eventType === 'group' ||
@@ -455,7 +509,7 @@ function handleEvent(api, event) {
             return;
         }
         
-        // 🔥 LOG DA MENSAGEM (APENAS SE TIVER TEXTO)
+        // 🔥 LOG DA MENSAGEM
         if (body) {
             log.msg("RECEBIDO", `De ${senderID.slice(-6)}: "${body.slice(0, 30)}${body.length > 30 ? '...' : ''}"`);
         }
@@ -560,7 +614,7 @@ function startListener(api) {
         }
     });
     
-    // Heartbeat a cada 5 minutos (menos poluído)
+    // Heartbeat a cada 5 minutos
     setInterval(() => {
         log.info("HEARTBEAT", "💓");
     }, 300000);
