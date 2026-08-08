@@ -19,16 +19,19 @@ const request = require("request").defaults({ jar: true, simple: false });
 const { execSync } = require('child_process');
 
 // ═══════════════════════════════════════════════════════════════
-// 📂 3. LOG
+// 📂 3. LOG (VERSÃO CLEAN)
 // ═══════════════════════════════════════════════════════════════
 
 const log = {
-    info: (tag, msg) => console.log(`📘 [${tag}] ${msg}`),
-    success: (tag, msg) => console.log(`✅ [${tag}] ${msg}`),
-    warn: (tag, msg) => console.log(`⚠️ [${tag}] ${msg}`),
-    error: (tag, msg) => console.log(`❌ [${tag}] ${msg}`),
-    master: (tag, msg) => console.log(`👑 [${tag}] ${msg}`),
-    err: (tag, msg) => console.log(`❌ [${tag}] ${msg}`)
+    info: (tag, msg) => console.log(`📘 ${tag.padEnd(12)} ${msg}`),
+    success: (tag, msg) => console.log(`✅ ${tag.padEnd(12)} ${msg}`),
+    warn: (tag, msg) => console.log(`⚠️ ${tag.padEnd(12)} ${msg}`),
+    error: (tag, msg) => console.log(`❌ ${tag.padEnd(12)} ${msg}`),
+    master: (tag, msg) => console.log(`👑 ${tag.padEnd(12)} ${msg}`),
+    cmd: (tag, msg) => console.log(`⚡ ${tag.padEnd(12)} ${msg}`),
+    msg: (tag, msg) => console.log(`💬 ${tag.padEnd(12)} ${msg}`),
+    db: (tag, msg) => console.log(`🗄️ ${tag.padEnd(12)} ${msg}`),
+    net: (tag, msg) => console.log(`🌐 ${tag.padEnd(12)} ${msg}`)
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -314,7 +317,6 @@ async function getAppState() {
     } catch (e) {
         log.error("LOGIN", `Erro: ${e.message}`);
 
-        // 🔥 TENTA USAR EMAIL/SENHA DO CONFIG
         if (config.facebookAccount?.email && config.facebookAccount?.password) {
             log.info("LOGIN", "📧 Usando email/senha do config.json...");
             const { email, password, userAgent } = config.facebookAccount;
@@ -383,8 +385,8 @@ async function loadData(api) {
         getAll: async () => global.db.allThreadData
     };
 
-    log.info("DATABASE", `👥 ${global.db.allUserData.length} usuários`);
-    log.info("DATABASE", `💬 ${global.db.allThreadData.length} grupos`);
+    log.db("USERS", `${global.db.allUserData.length} usuários`);
+    log.db("THREADS", `${global.db.allThreadData.length} grupos`);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -408,7 +410,7 @@ async function loadScripts(api) {
             const name = cmd.config.name;
             global.SadXBot.commands.set(name, cmd);
             loaded++;
-            log.success("LOAD", `✅ ${file} carregado`);
+            log.success("LOAD", `✅ ${file}`);
         } catch (e) {
             errors++;
             log.error("LOAD", `❌ ${file}: ${e.message}`);
@@ -419,54 +421,66 @@ async function loadScripts(api) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🎯 13. HANDLER DE EVENTOS (CORRIGIDO)
+// 🎯 13. HANDLER DE EVENTOS (VERSÃO CLEAN)
 // ═══════════════════════════════════════════════════════════════
 
 function handleEvent(api, event) {
     try {
-        // 🔥 LOG BRUTO DO EVENTO - PRA VER SE ESTÁ CHEGANDO ALGO
-        console.log("📨 EVENTO BRUTO:", JSON.stringify(event, null, 2));
-        console.log("📨 TIPO:", event.type);
-        console.log("📨 BODY:", event.body);
-        
         // 🔥 PULA EVENTOS DO PRÓPRIO BOT
         if (event.senderID === api.getCurrentUserID()) {
-            log.info("HANDLER", "⏭️ Ignorando mensagem do próprio bot");
             return;
         }
         
-        // 🔥 SÓ PROCESSA MENSAGENS DE TEXTO
-        if (event.type !== 'message' && event.type !== 'message_reply') {
-            log.info("HANDLER", `⏭️ Ignorando tipo: ${event.type}`);
+        // 🔥 PEGA O TIPO DO EVENTO
+        const eventType = event.type || event.event_type || 'unknown';
+        
+        // 🔥 SÓ PROCESSA MENSAGENS
+        const isMessage = eventType === 'message' || 
+                         eventType === 'message_reply' || 
+                         eventType === 'group' ||
+                         eventType === 'user' ||
+                         event.body !== undefined;
+        
+        if (!isMessage) {
             return;
         }
         
-        const { threadID, messageID, senderID, body } = event;
+        // 🔥 PEGA OS DADOS
+        const body = event.body || event.message || event.text || '';
+        const threadID = event.threadID || event.thread_id || event.senderID;
+        const messageID = event.messageID || event.message_id || event.id;
+        const senderID = event.senderID || event.sender_id || event.author;
         
-        // 🔥 LOG DA MENSAGEM
-        log.info("MENSAGEM", `📨 De: ${senderID} | Na thread: ${threadID}`);
-        log.info("MENSAGEM", `💬 "${body || '[sem texto]'}"`);
+        if (!threadID || !senderID) {
+            return;
+        }
+        
+        // 🔥 LOG DA MENSAGEM (APENAS SE TIVER TEXTO)
+        if (body) {
+            log.msg("RECEBIDO", `De ${senderID.slice(-6)}: "${body.slice(0, 30)}${body.length > 30 ? '...' : ''}"`);
+        }
         
         // 🔥 VERIFICA WHITELIST
         if (config.whiteListMode?.enable) {
             if (!config.whiteListMode.whiteListIds.includes(senderID?.toString()) &&
                 !config.adminBot.includes(senderID?.toString())) {
-                log.info("WHITELIST", `⏭️ Usuário ${senderID} não está na whitelist`);
                 return;
             }
         }
         
         // 🔥 VERIFICA SE É COMANDO
-        if (!body || !body.startsWith(config.prefix || '!')) {
-            log.info("MENSAGEM", "⏭️ Não é um comando");
+        const prefix = config.prefix || '!';
+        if (!body || !body.startsWith(prefix)) {
             return;
         }
         
         // 🔥 EXTRAI O COMANDO
-        const args = body.slice(config.prefix.length).trim().split(/\s+/);
+        const args = body.slice(prefix.length).trim().split(/\s+/);
         const commandName = args.shift().toLowerCase();
         
-        log.info("COMANDO", `⚡ Comando: ${commandName} | Args: ${args.length}`);
+        if (!commandName) {
+            return;
+        }
         
         // 🔥 BUSCA O COMANDO
         let command = global.SadXBot.commands.get(commandName);
@@ -476,13 +490,20 @@ function handleEvent(api, event) {
         }
         
         if (!command) {
-            log.warn("COMANDO", `❌ Comando não encontrado: ${commandName}`);
-            api.sendMessage(`❌ Comando "${commandName}" não encontrado. Use ${config.prefix}help`, threadID);
+            log.warn("COMANDO", `❌ "${commandName}" não encontrado`);
+            api.sendMessage(`❌ Comando "${commandName}" não encontrado. Use ${prefix}help`, threadID);
+            return;
+        }
+        
+        // 🔥 VERIFICA SE O COMANDO ESTÁ BANIDO
+        if (global.client.commandBanned?.includes(commandName)) {
+            log.warn("COMANDO", `⛔ "${commandName}" banido`);
+            api.sendMessage(`⛔ O comando "${commandName}" está desativado.`, threadID);
             return;
         }
         
         // 🔥 EXECUTA O COMANDO
-        log.success("COMANDO", `✅ Executando: ${commandName}`);
+        log.cmd("EXECUTANDO", `${commandName} (${args.length} args)`);
         try {
             const result = command.onStart({
                 api,
@@ -495,66 +516,54 @@ function handleEvent(api, event) {
                 prefix: global.SadXBot.prefix
             });
             
-            // Se for Promise, espera
             if (result && typeof result.then === 'function') {
                 result.catch(error => {
-                    log.error("COMANDO", `❌ Erro na promise: ${error.message}`);
+                    log.error("COMANDO", `❌ ${commandName}: ${error.message}`);
                     api.sendMessage(`❌ Erro: ${error.message}`, threadID);
                 });
             }
         } catch (error) {
-            log.error("COMANDO", `❌ Erro ao executar ${commandName}: ${error.message}`);
+            log.error("COMANDO", `❌ ${commandName}: ${error.message}`);
             api.sendMessage(`❌ Erro: ${error.message}`, threadID);
         }
         
     } catch (error) {
-        log.error("HANDLER", `❌ Erro crítico: ${error.message}`);
-        console.error(error.stack);
+        log.error("HANDLER", error.message);
     }
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 📡 14. LISTENER CORRIGIDO PARA MAHMUD-FCA
+// 📡 14. LISTENER
 // ═══════════════════════════════════════════════════════════════
 
 function startListener(api) {
-    log.info("LISTENER", "📡 Iniciando listener MQTT...");
+    log.info("LISTENER", "📡 Iniciando...");
     
-    // 🔥 LISTENER PRINCIPAL
     api.listenMqtt((err, event) => {
         if (err) {
-            log.error("LISTENER", `❌ Erro no MQTT: ${err.message || err}`);
-            log.info("LISTENER", "🔄 Tentando reconectar em 5 segundos...");
-            
-            // Tenta reconectar
+            log.error("LISTENER", `❌ ${err.message || err}`);
+            log.info("LISTENER", "🔄 Reconectando em 5s...");
             setTimeout(() => {
-                log.info("LISTENER", "🔄 Reconectando...");
                 startListener(api);
             }, 5000);
             return;
         }
         
-        // 🔥 SÓ PROCESSA SE TIVER EVENTO
         if (!event) {
-            log.warn("LISTENER", "⚠️ Evento vazio recebido");
             return;
         }
         
-        // 📝 LOG DO QUE RECEBEU
-        log.info("LISTENER", `📩 Evento: ${event.type || 'desconhecido'} | Thread: ${event.threadID || 'N/A'}`);
-        
-        // 🔥 PROCESSA O EVENTO
         try {
             handleEvent(api, event);
         } catch (error) {
-            log.error("LISTENER", `❌ Erro ao processar: ${error.message}`);
+            log.error("LISTENER", error.message);
         }
     });
     
-    // 🔥 HEARTBEAT - Verifica se o listener ainda está vivo
+    // Heartbeat a cada 5 minutos (menos poluído)
     setInterval(() => {
-        log.info("HEARTBEAT", "💓 Listener ativo...");
-    }, 60000); // A cada 1 minuto
+        log.info("HEARTBEAT", "💓");
+    }, 300000);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -563,7 +572,7 @@ function startListener(api) {
 
 (async function startBot() {
     try {
-        console.log(`🌸 ${config.nickNameBot || 'SadX Bot'} iniciando...`);
+        console.log(`\n🌸 ${config.nickNameBot || 'SadX Bot'} iniciando...\n`);
 
         const appState = await getAppState();
 
@@ -574,7 +583,7 @@ function startListener(api) {
             }
 
             log.success("LOGIN", `✅ Conectado!`);
-            log.info("LOGIN", `🆔 Bot ID: ${api.getCurrentUserID()}`);
+            log.info("LOGIN", `🆔 ID: ${api.getCurrentUserID()}`);
 
             global.SadXBot.fcaApi = api;
             global.SadXBot.botID = api.getCurrentUserID();
@@ -582,19 +591,16 @@ function startListener(api) {
             await loadData(api);
             await loadScripts(api);
 
-            log.success("START", `🚀 ${config.nickNameBot || 'SadX Bot'} pronto!`);
-            log.info("START", `📅 ${new Date().toLocaleString()}`);
-            log.info("START", `💡 Prefixo: ${config.prefix || '!'}`);
-            log.info("START", `👑 Admins: ${config.adminBot?.length || 0}`);
+            console.log(`\n🚀 ${config.nickNameBot || 'SadX Bot'} pronto!`);
+            console.log(`💡 Prefixo: ${config.prefix || '!'}`);
+            console.log(`👑 Admins: ${config.adminBot?.length || 0}`);
+            console.log(`📅 ${new Date().toLocaleString()}\n`);
 
-            // 🔥 AUTO RESTART REMOVIDO - O BOT NÃO VAI MAIS DESLIGAR SOZINHO!
-
-            // 🔥 USA O LISTENER CORRIGIDO
             startListener(api);
         });
 
     } catch (error) {
-        log.error("FATAL", `Erro fatal: ${error.message}`);
+        log.error("FATAL", error.message);
         process.exit(1);
     }
 })();
