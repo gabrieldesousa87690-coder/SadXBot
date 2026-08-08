@@ -7,23 +7,23 @@ const mahmud = async () => {
 
 module.exports = {
         config: {
-                name: "sing",
+                name: "play",
                 version: "1.7",
                 author: "MahMUD",
                 countDown: 10,
                 role: 0,
                 description: {
-                        pt: "Pesquise e baixe qualquer música como arquivo de áudio"
+                        pt: "Pesquise e reproduza qualquer música como arquivo de áudio"
                 },
                 category: "music",
                 guide: {
-                        pt: '   {pn} <nome da música>: Digite o nome da música para baixar'
+                        pt: '   {pn} <nome da música>: Digite o nome da música para tocar'
                 }
         },
 
         langs: {
                 pt: {
-                        noInput: "× Baby, forneça o nome da música! 🎵\nExemplo: {pn} shape of you",
+                        noInput: "× Baby, forneça o nome da música! 🎵\nExemplo: {pn} mood",
                         success: "✅ | Aqui está sua música baby <😘\n• 𝐌ú𝐬𝐢𝐜𝐚: %1",
                         error: "× Erro na API: %1. Contate MahMUD para ajuda."
                 }
@@ -36,18 +36,22 @@ module.exports = {
                 }
 
                 const query = args.join(" ");
-                if (!query) return message.reply(getLang("noInput"));
+                if (!query) {
+                        api.setMessageReaction("🥹", event.messageID, () => {}, true);
+                        return message.reply(getLang("noInput"));
+                }
 
                 try {
-                        api.setMessageReaction("⌛", event.messageID, () => {}, true);
+                        api.setMessageReaction("🐤", event.messageID, () => {}, true);
 
                         const baseUrl = await mahmud();
-                        const apiUrl = `${baseUrl}/api/song/mahmud?query=${encodeURIComponent(query)}`;
+                        const apiUrl = `${baseUrl}/api/play?mahmud=${encodeURIComponent(query)}`;
 
                         const response = await axios({
                                 method: "GET",
                                 url: apiUrl,
-                                responseType: "stream"
+                                responseType: "stream",
+                                headers: { author: authorName }
                         });
 
                         return message.reply({
@@ -58,8 +62,8 @@ module.exports = {
                         });
 
                 } catch (err) {
-                        console.error("Sing Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
+                        console.error("Play Error:", err);
+                        api.setMessageReaction("🥹", event.messageID, () => {}, true);
                         return message.reply(getLang("error", err.message));
                 }
         }

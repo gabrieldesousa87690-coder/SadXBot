@@ -1,0 +1,79 @@
+
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+
+const baseApiUrl = async () => {
+        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
+        return base.data.mahmud;
+};
+
+module.exports = {
+        config: {
+                name: "rip",
+                aliases: ["tumba"],
+                version: "1.7",
+                author: "MahMUD",
+                countDown: 10,
+                role: 0,
+                description: {
+                        pt: "Crie uma imagem de lápide RIP para alguém"
+                },
+                category: "fun",
+                guide: {
+                        pt: '   {pn} <menção/resposta/UID>: Use para criar imagem de lápide'
+                }
+        },
+
+        langs: {
+                pt: {
+                        noTarget: "× Baby, marque, responda ou forneça o UID do alvo! 🐸",
+                        success: "𝐄𝐟𝐞𝐢𝐭𝐨 𝐑𝐈𝐏 𝐚𝐩𝐥𝐢𝐜𝐚𝐝𝐨 𝐜𝐨𝐦 𝐬𝐮𝐜𝐞𝐬𝐬𝐨 𝐛𝐚𝐛𝐲 <😘",
+                        error: "× Erro na API: %1. Contate MahMUD para ajuda."
+                }
+        },
+
+        onStart: async function ({ api, event, args, message, getLang }) {
+                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
+                if (this.config.author !== authorName) {
+                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
+                }
+
+                const { threadID, messageID, messageReply, mentions } = event;
+                let id2;
+                if (messageReply) id2 = messageReply.senderID;
+                else if (Object.keys(mentions).length > 0) id2 = Object.keys(mentions)[0];
+                else if (args[0]) id2 = args[0];
+                else return message.reply(getLang("noTarget"));
+
+                const cacheDir = path.join(__dirname, "cache");
+                const filePath = path.join(cacheDir, `rip_${id2}_${Date.now()}.png`);
+                if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+
+                try {
+                        
+                        api.setMessageReaction("⏳", messageID, () => {}, true);
+
+                        const baseUrl = await baseApiUrl();
+                        const url = `${baseUrl}/api/dig?type=rip&user=${id2}`;
+                        const response = await axios.get(url, { responseType: "arraybuffer" });
+                        
+                        fs.writeFileSync(filePath, response.data);
+
+                        return message.reply({
+                                body: getLang("success"),
+                                attachment: fs.createReadStream(filePath)
+                        }, () => {
+                                api.setMessageReaction("🪽", messageID, () => {}, true);
+                                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+                        });
+
+                } catch (err) {
+                        console.error("RIP Error:", err);
+                        api.setMessageReaction("❌", messageID, () => {}, true);
+                        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+                        const errorMsg = err.response?.data?.error || err.message;
+                        return message.reply(getLang("error", errorMsg));
+                }
+        }
+};
